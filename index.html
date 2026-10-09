@@ -7,25 +7,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Métro">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1a3e8c">
+<meta name="theme-color" content="#000000">
 <title>Attente métro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Layout: une colonne mobile. Chaque station est une plaque émaillée bleue (comme dans les stations) suivie de ses lignes et de leurs prochains passages. */
+/* Layout: une colonne mobile. Chaque station est un panneau de quai noir, texte ambre en points lumineux, pastille de ligne colorée, deux prochains trains par direction. */
 :root {
   --bg: #eef1f5;
   --surface: #ffffff;
   --ink: #131c2b;
   --muted: #5a6779;
   --line: #d6dce6;
-  --plate: #1a3e8c;
-  --plate-ink: #ffffff;
   --accent: #1a3e8c;
-  --ok: #17794a;
-  --warn: #a85a00;
-  --crit: #b3261e;
+  --on-accent: #ffffff;
+  --led: #ffb000;
+  --led-dim: #9a6b00;
+  --led-warn: #ff8a5c;
+  --panel: #060606;
+  --panel-edge: #2b2b2b;
   --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
   --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
@@ -33,13 +34,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
-    --plate: #234ba8; --plate-ink: #ffffff; --accent: #8fb0ff; --ok: #4cc287; --warn: #f0a24a; --crit: #ff7b72;
+    --accent: #234ba8; --on-accent: #ffffff;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
-  --plate: #234ba8; --plate-ink: #ffffff; --accent: #8fb0ff; --ok: #4cc287; --warn: #f0a24a; --crit: #ff7b72;
+  --accent: #234ba8; --on-accent: #ffffff;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -59,30 +60,39 @@ button, select, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; min-height: 40px; font-weight: 500; }
-.btn.primary { background: var(--plate); color: var(--plate-ink); border-color: var(--plate); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .btn[disabled] { opacity: .55; cursor: default; }
 .quota { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .meter > i { display: block; height: 100%; background: var(--accent); width: 0; }
-.meter.hot > i { background: var(--crit); }
-.station { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.plate { background: var(--plate); color: var(--plate-ink); padding: 10px 14px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.plate h2 { margin: 0; font: 600 24px/1.1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; min-width: 0; overflow-wrap: anywhere; }
-.plate small { opacity: .8; font-size: 12px; white-space: nowrap; }
-.rows { display: flex; flex-direction: column; }
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; }
-.row + .row { border-top: 1px solid var(--line); }
-.badge { min-width: 40px; height: 32px; padding-inline: 8px; border-radius: 16px; background: var(--ink); color: var(--surface); display: grid; place-items: center; font: 600 17px/1 var(--font-display); letter-spacing: .02em; }
-.dest { font-weight: 500; overflow-wrap: anywhere; }
-.meta { color: var(--muted); font-size: 12px; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-.chip { border: 1px solid currentColor; border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
-.chip.warn { color: var(--warn); } .chip.crit { color: var(--crit); } .chip.mute { color: var(--muted); }
-.times { text-align: right; font-variant-numeric: tabular-nums; }
-.next { font: 600 34px/1 var(--font-display); }
-.next span { font: 500 13px var(--font-body); color: var(--muted); margin-left: 3px; }
-.later { color: var(--muted); font-size: 13px; margin-top: 3px; }
-.empty, .err { padding: 14px; color: var(--muted); }
-.err { color: var(--crit); }
+.meter.hot > i { background: #b3261e; }
+
+/* Panneaux de quai */
+#stations { display: flex; flex-direction: column; gap: 14px; }
+.board { background: var(--panel); border: 3px solid var(--panel-edge); border-radius: 12px; padding: 10px 14px 6px; box-shadow: inset 0 0 0 1px #000; color: var(--led); }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #1d1d1d; font: 600 15px/1.1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--led-dim); }
+.board-head span { min-width: 0; overflow-wrap: anywhere; }
+.board-meta { white-space: nowrap; }
+.board-msg { padding: 12px 0 10px; color: var(--led-dim); font-size: 14px; }
+.board-msg.err { color: var(--led-warn); }
+.trains { display: flex; flex-direction: column; }
+.train { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; }
+.train + .train { border-top: 1px solid #141414; }
+.bullet { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 19px/1 var(--font-display); letter-spacing: 0; }
+.bullet.long { font-size: 10px; }
+.glow { filter: drop-shadow(0 0 3px rgba(255, 176, 0, .55)); min-width: 0; }
+/* Effet matrice à points : le texte est masqué par une grille de points ronds */
+.led {
+  color: var(--led);
+  -webkit-mask: radial-gradient(circle at 50% 50%, #000 0 1.15px, transparent 1.5px) 0 0 / 3px 3px;
+  mask: radial-gradient(circle at 50% 50%, #000 0 1.15px, transparent 1.5px) 0 0 / 3px 3px;
+}
+.dest { font: 600 23px/1.15 var(--font-display); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { font: 700 27px/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.time.dim, .dest.dim { color: var(--led-dim); }
+.note { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--led-dim); margin-top: 1px; }
+.note.late { color: var(--led-warn); }
+
 details.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 details.panel > summary { padding: 12px 14px; font-weight: 600; cursor: pointer; }
 .panel .body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -93,7 +103,6 @@ input, select { border: 1px solid var(--line); background: var(--bg); border-rad
 .list { display: flex; flex-direction: column; gap: 6px; }
 .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 6px 6px 10px; }
 .item code { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.tag-demo { font-size: 12px; color: var(--warn); font-weight: 600; }
 @media (prefers-reduced-motion: no-preference) { .btn { transition: background-color .15s; } }
 </style>
 </head>
@@ -173,6 +182,10 @@ input, select { border: 1px solid var(--line); background: var(--bg); border-rad
 <script>
 // ---------- Fonctions pures (testées hors navigateur) ----------
 // PURE-START
+// Couleurs de lignes de métro (de mémoire, à corriger si besoin) et correspondance code IDFM -> numéro.
+// Le numéro vient d'abord du nom publié par l'API ; la table de codes ne sert qu'en secours.
+var LINE_COLORS = { '1': '#FFCE00', '2': '#0064B0', '3': '#9F9825', '3B': '#98D4E2', '4': '#C04191', '5': '#F28E42', '6': '#83C491', '7': '#F3A4BA', '7B': '#83C491', '8': '#CEADD2', '9': '#D5C900', '10': '#E3B32A', '11': '#8D5E2A', '12': '#00814F', '13': '#98D4E2', '14': '#662483' };
+var CODE_TO_LINE = { 'C01371': '1', 'C01372': '2', 'C01373': '3', 'C01386': '3B', 'C01374': '4', 'C01375': '5', 'C01376': '6', 'C01377': '7', 'C01387': '7B', 'C01378': '8', 'C01379': '9', 'C01380': '10', 'C01381': '11', 'C01382': '12', 'C01383': '13', 'C01384': '14' };
 function val(x) {
   if (x == null) return '';
   if (Array.isArray(x)) return val(x[0]);
@@ -190,6 +203,18 @@ function shortLine(ref) {
   const m = /Line::([^:]+):?/.exec(ref || '');
   return m ? m[1] : (ref || '?');
 }
+function normLine(s) {
+  return String(s || '').trim().toUpperCase().replace(/^M(ETRO|ÉTRO)?\s*/, '').replace(/\s*BIS$/, 'B');
+}
+function lineLabel(published, ref) {
+  const code = shortLine(ref);
+  return normLine(published) || CODE_TO_LINE[code] || code;
+}
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111111' : '#ffffff';
+}
 function parseVisits(json) {
   const out = [];
   let deliveries = json && json.Siri && json.Siri.ServiceDelivery && json.Siri.ServiceDelivery.StopMonitoringDelivery;
@@ -206,7 +231,7 @@ function parseVisits(json) {
       const lineRef = val(j.LineRef);
       out.push({
         lineRef: lineRef,
-        line: val(j.PublishedLineName) || shortLine(lineRef),
+        line: lineLabel(val(j.PublishedLineName), lineRef),
         dest: val(j.DestinationName) || val(c.DestinationDisplay) || val(j.DirectionName),
         time: t.getTime(),
         realtime: !!expected,
@@ -234,7 +259,12 @@ function groupVisits(visits, now) {
   return groups;
 }
 function minutesUntil(ms, now) { return Math.floor((ms - now) / 60000); }
-function fold(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function timeLabel(ms, now) {
+  const m = minutesUntil(ms, now);
+  return m < 1 ? '< 1 mn' : m + ' mn';
+}
+// Ignore accents, majuscules, espaces et tirets : \u00ab Rosny-Bois-Perrier \u00bb = \u00ab Rosny - Bois-Perrier \u00bb.
+function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function matchDest(dest, filter) { const f = fold(filter).trim(); return !f || fold(dest).indexOf(f) !== -1; }
 function normalizeId(raw, kind) {
   const s = String(raw || '').trim();
@@ -245,19 +275,19 @@ function normalizeId(raw, kind) {
 }
 function makeSample(now) {
   const iso = function (m) { return new Date(now + m * 60000).toISOString(); };
-  const visit = function (line, dest, m, status) {
+  const visit = function (code, name, dest, m, status) {
     return { MonitoredVehicleJourney: {
-      LineRef: { value: 'STIF:Line::C' + line + ':' },
-      PublishedLineName: [{ value: String(Number(line) % 100 || line) }],
+      LineRef: { value: 'STIF:Line::' + code + ':' },
+      PublishedLineName: [{ value: name }],
       DestinationName: [{ value: dest }],
       MonitoredCall: { ExpectedDepartureTime: iso(m), DepartureStatus: status || 'onTime' }
     } };
   };
   return { Siri: { ServiceDelivery: { StopMonitoringDelivery: [{ MonitoredStopVisit: [
-    visit('01371', 'La Défense', 2), visit('01371', 'La Défense', 6), visit('01371', 'La Défense', 11),
-    visit('01371', 'Château de Vincennes', 1), visit('01371', 'Château de Vincennes', 5), visit('01371', 'Château de Vincennes', 9, 'delayed'),
-    visit('01374', 'Porte de Clignancourt', 4), visit('01374', 'Porte de Clignancourt', 8),
-    visit('01374', 'Mairie de Montrouge', 3), visit('01374', 'Mairie de Montrouge', 7, 'cancelled')
+    visit('C01381', '11', 'Châtelet', 2), visit('C01381', '11', 'Châtelet', 7), visit('C01381', '11', 'Châtelet', 12),
+    visit('C01381', '11', 'Rosny - Bois-Perrier', 1), visit('C01381', '11', 'Rosny - Bois-Perrier', 5, 'delayed'),
+    visit('C01372', '2', 'Porte Dauphine', 4), visit('C01372', '2', 'Porte Dauphine', 9),
+    visit('C01372', '2', 'Nation', 3), visit('C01372', '2', 'Nation', 8, 'cancelled')
   ] }] } } };
 }
 // PURE-END
@@ -277,6 +307,7 @@ function save() { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (
 function dayKey() { return 'metro-attente.count.' + new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); }
 function getCount() { try { return parseInt(localStorage.getItem(dayKey()) || '0', 10) || 0; } catch (e) { return 0; } }
 function addCount(n) { try { localStorage.setItem(dayKey(), String(getCount() + n)); } catch (e) {} }
+function hhmm(ms) { return new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }); }
 
 // ---------- Réseau ----------
 const PRIM = 'https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring';
@@ -308,7 +339,7 @@ async function refresh() {
   busy = true; $('#refreshBtn').disabled = true; setStatus('Actualisation…');
   await Promise.all(cfg.stations.map(async function (s) { data[s.id] = await fetchStation(s.id); }));
   busy = false; $('#refreshBtn').disabled = false;
-  setStatus('Actualisé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }));
+  setStatus('Actualisé à ' + hhmm(Date.now()));
   renderAll();
 }
 
@@ -330,51 +361,56 @@ function renderQuota() {
   $('#meter').classList.toggle('hot', pct >= 90);
 }
 
+function bullet(line) {
+  const b = el('div', 'bullet' + (line.length > 3 ? ' long' : ''), line.replace(/B$/, 'bis'));
+  const c = LINE_COLORS[line];
+  b.style.background = c || '#555555';
+  b.style.color = c ? inkFor(c) : '#ffffff';
+  return b;
+}
+function ledText(cls, text) {
+  const g = el('div', 'glow');
+  g.appendChild(el('div', 'led ' + cls, text));
+  return g;
+}
+function trainRow(line, dest, timeText, opts) {
+  const row = el('div', 'train');
+  row.appendChild(bullet(line));
+  const mid = el('div');
+  mid.style.minWidth = '0';
+  mid.appendChild(ledText('dest' + (opts.dim ? ' dim' : ''), dest || 'Direction inconnue'));
+  if (opts.note) mid.appendChild(el('div', 'note' + (opts.late ? ' late' : ''), opts.note));
+  row.appendChild(mid);
+  row.appendChild(ledText('time' + (opts.dim ? ' dim' : ''), timeText));
+  return row;
+}
+
 function stationCard(label, id, entry, now, isDemo, destFilter) {
-  const card = el('article', 'station');
-  const plate = el('div', 'plate');
-  plate.appendChild(el('h2', null, label));
-  if (isDemo) plate.appendChild(el('small', null, 'Exemple'));
-  else if (entry && entry.fetchedAt) plate.appendChild(el('small', null, new Date(entry.fetchedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })));
-  card.appendChild(plate);
-  if (!entry) { card.appendChild(el('div', 'empty', 'Appuyez sur Actualiser.')); return card; }
-  if (entry.error) { card.appendChild(el('div', 'err', entry.error)); return card; }
+  const board = el('article', 'board');
+  const head = el('div', 'board-head');
+  head.appendChild(el('span', null, label));
+  head.appendChild(el('span', 'board-meta', isDemo ? 'Exemple' : (entry && entry.fetchedAt ? hhmm(entry.fetchedAt) : '')));
+  board.appendChild(head);
+  if (!entry) { board.appendChild(el('div', 'board-msg', 'Appuyez sur Actualiser.')); return board; }
+  if (entry.error) { board.appendChild(el('div', 'board-msg err', entry.error)); return board; }
   const groups = groupVisits(entry.visits, now).filter(function (g) { return matchDest(g.dest, destFilter); });
   if (!groups.length) {
-    card.appendChild(el('div', 'empty', destFilter
+    board.appendChild(el('div', 'board-msg', destFilter
       ? 'Aucun passage annoncé vers « ' + destFilter + ' ». Vérifiez le filtre de direction, ou le temps réel n\'est pas disponible sur cet arrêt.'
       : 'Aucun passage annoncé pour cet arrêt. Le temps réel ne couvre qu\'une partie du réseau.'));
-    return card;
+    return board;
   }
-  const rows = el('div', 'rows');
+  const list = el('div', 'trains');
   for (const g of groups) {
-    const row = el('div', 'row');
-    row.appendChild(el('div', 'badge', g.line));
-    const mid = el('div');
-    mid.appendChild(el('div', 'dest', g.dest || 'Direction inconnue'));
-    const meta = el('div', 'meta');
-    const f = g.active[0];
-    if (!f) meta.appendChild(el('span', 'chip crit', 'Supprimé'));
-    else {
-      if (f.status === 'delayed') meta.appendChild(el('span', 'chip warn', 'Retard'));
-      if (!f.realtime) meta.appendChild(el('span', 'chip mute', 'Horaire théorique'));
-    }
-    if (meta.childNodes.length) mid.appendChild(meta);
-    row.appendChild(mid);
-    const t = el('div', 'times');
-    if (f) {
-      const m = minutesUntil(f.time, now);
-      const big = el('div', 'next', m < 1 ? '<1' : String(m));
-      big.appendChild(el('span', null, 'min'));
-      t.appendChild(big);
-      const later = g.active.slice(1, 3).map(function (i) { return Math.max(0, minutesUntil(i.time, now)); });
-      if (later.length) t.appendChild(el('div', 'later', later.join(' · ') + ' min'));
-    }
-    row.appendChild(t);
-    rows.appendChild(row);
+    if (!g.active.length) { list.appendChild(trainRow(g.line, g.dest, 'Supprimé', { dim: true })); continue; }
+    g.active.slice(0, 2).forEach(function (it) {
+      const late = it.status === 'delayed';
+      const note = late ? 'Retard' : (!it.realtime ? 'Horaire théorique' : '');
+      list.appendChild(trainRow(g.line, g.dest, timeLabel(it.time, now), { note: note, late: late, dim: !it.realtime }));
+    });
   }
-  card.appendChild(rows);
-  return card;
+  board.appendChild(list);
+  return board;
 }
 
 function renderAll() {
@@ -383,11 +419,11 @@ function renderAll() {
   const now = Date.now();
   if (demo) {
     const e = { visits: parseVisits(makeSample(now)), fetchedAt: now };
-    box.appendChild(stationCard('Station exemple', 'demo', e, now, true));
+    box.appendChild(stationCard('Télégraphe', 'demo', e, now, true, ''));
   } else if (!cfg.stations.length) {
-    const c = el('div', 'station');
-    c.appendChild(el('div', 'empty', 'Aucune station suivie. Ouvrez « Réglages et stations », collez votre clé PRIM puis ajoutez une station. « Voir un exemple » montre l\'affichage avec des données fictives.'));
-    box.appendChild(c);
+    const b = el('article', 'board');
+    b.appendChild(el('div', 'board-msg', 'Aucune station suivie. Ouvrez « Réglages et stations », collez votre clé PRIM puis ajoutez une station. « Voir un exemple » montre l\'affichage avec des données fictives.'));
+    box.appendChild(b);
   } else {
     for (const s of cfg.stations) box.appendChild(stationCard(s.label, s.id, data[s.id], now, false, s.dest));
   }
