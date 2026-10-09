@@ -300,8 +300,21 @@ let demo = false;
 let busy = false;
 let autoTimer = null;
 
+// Stations affichées d'office sur un appareil qui n'a encore aucun réglage enregistré (la clé API n'est jamais incluse ici).
+const DEFAULT_STATIONS = [
+  { label: 'Télégraphe', id: 'STIF:StopPoint:Q:21993:', dest: 'Châtelet' },
+  { label: 'Belleville', id: 'STIF:StopPoint:Q:22128:', dest: 'Porte Dauphine' },
+  { label: 'Anvers', id: 'STIF:StopArea:SP:22123:', dest: 'Nation' },
+  { label: 'Anvers', id: 'STIF:StopArea:SP:463120:', dest: 'Nation' },
+  { label: 'Belleville', id: 'STIF:StopArea:SP:463110:', dest: 'Rosny' }
+];
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s) cfg = Object.assign(cfg, s); } catch (e) {}
+  let found = false;
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) { cfg = Object.assign(cfg, JSON.parse(raw)); found = true; }
+  } catch (e) {}
+  if (!found) cfg.stations = DEFAULT_STATIONS.map(function (s) { return Object.assign({}, s); });
 }
 function save() { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (e) {} }
 function dayKey() { return 'metro-attente.count.' + new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); }
