@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Métro">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a3e8c">
+<title>Attente métro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: une colonne mobile. Chaque station est une plaque émaillée bleue (comme dans les stations) suivie de ses lignes et de leurs prochains passages. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #131c2b;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --plate: #1a3e8c;
+  --plate-ink: #ffffff;
+  --accent: #1a3e8c;
+  --ok: #17794a;
+  --warn: #a85a00;
+  --crit: #b3261e;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
+    --plate: #234ba8; --plate-ink: #ffffff; --accent: #8fb0ff; --ok: #4cc287; --warn: #f0a24a; --crit: #ff7b72;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
+  --plate: #234ba8; --plate-ink: #ffffff; --accent: #8fb0ff; --ok: #4cc287; --warn: #f0a24a; --crit: #ff7b72;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 var(--font-body);
+  padding-inline: 16px;
+  padding-block: calc(env(safe-area-inset-top, 0px) + 14px) calc(env(safe-area-inset-bottom, 0px) + 28px);
+  -webkit-text-size-adjust: 100%;
+}
+main { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font: 600 30px/1 var(--font-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; min-height: 40px; font-weight: 500; }
+.btn.primary { background: var(--plate); color: var(--plate-ink); border-color: var(--plate); }
+.btn[disabled] { opacity: .55; cursor: default; }
+.quota { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--accent); width: 0; }
+.meter.hot > i { background: var(--crit); }
+.station { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.plate { background: var(--plate); color: var(--plate-ink); padding: 10px 14px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.plate h2 { margin: 0; font: 600 24px/1.1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; min-width: 0; overflow-wrap: anywhere; }
+.plate small { opacity: .8; font-size: 12px; white-space: nowrap; }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; }
+.row + .row { border-top: 1px solid var(--line); }
+.badge { min-width: 40px; height: 32px; padding-inline: 8px; border-radius: 16px; background: var(--ink); color: var(--surface); display: grid; place-items: center; font: 600 17px/1 var(--font-display); letter-spacing: .02em; }
+.dest { font-weight: 500; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 12px; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.chip { border: 1px solid currentColor; border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.chip.warn { color: var(--warn); } .chip.crit { color: var(--crit); } .chip.mute { color: var(--muted); }
+.times { text-align: right; font-variant-numeric: tabular-nums; }
+.next { font: 600 34px/1 var(--font-display); }
+.next span { font: 500 13px var(--font-body); color: var(--muted); margin-left: 3px; }
+.later { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.empty, .err { padding: 14px; color: var(--muted); }
+.err { color: var(--crit); }
+details.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.panel > summary { padding: 12px 14px; font-weight: 600; cursor: pointer; }
+.panel .body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+input, select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 10px; min-height: 40px; color: var(--ink); width: 100%; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.item { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 6px 6px 10px; }
+.item code { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.tag-demo { font-size: 12px; color: var(--warn); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) { .btn { transition: background-color .15s; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Attente métro</h1>
+      <div class="sub" id="status">Pas encore actualisé</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="demoBtn" type="button">Voir un exemple</button>
+      <button class="btn primary" id="refreshBtn" type="button">Actualiser</button>
+    </div>
+  </header>
+
+  <div class="quota" aria-live="polite">
+    <span id="quotaText"></span>
+    <div class="meter" id="meter"><i id="meterFill"></i></div>
+  </div>
+
+  <section id="stations" aria-live="polite"></section>
+
+  <details class="panel" id="settings">
+    <summary>Réglages et stations</summary>
+    <div class="body">
+      <label for="apikey">Clé API PRIM
+        <input id="apikey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Jeton généré sur prim.iledefrance-mobilites.fr">
+      </label>
+      <label for="relay">Adresse du relais (facultatif)
+        <input id="relay" type="url" autocapitalize="off" spellcheck="false" placeholder="https://mon-relais.workers.dev">
+      </label>
+      <p class="hint">Avec un relais, la clé reste sur le relais et n'est plus envoyée depuis l'iPhone. Utile si le navigateur bloque l'appel direct à PRIM.</p>
+      <div class="grid2">
+        <label for="quota">Quota par jour
+          <input id="quota" type="number" min="1" step="1" inputmode="numeric">
+        </label>
+        <label for="auto">Actualisation automatique
+          <select id="auto">
+            <option value="0">Désactivée</option>
+            <option value="60">Toutes les minutes</option>
+            <option value="120">Toutes les 2 minutes</option>
+            <option value="300">Toutes les 5 minutes</option>
+          </select>
+        </label>
+      </div>
+      <button class="btn" id="saveBtn" type="button">Enregistrer les réglages</button>
+
+      <hr style="border:0;border-top:1px solid var(--line);width:100%;margin:0">
+
+      <div class="list" id="stationList"></div>
+      <form id="addForm" class="body" style="padding:0">
+        <div class="grid2">
+          <label for="stLabel">Nom affiché
+            <input id="stLabel" type="text" placeholder="Ex. Châtelet" required>
+          </label>
+          <label for="stKind">Type d'identifiant
+            <select id="stKind">
+              <option value="area">Zone d'arrêts (STIF:StopArea:SP)</option>
+              <option value="point">Quai, un sens (STIF:StopPoint:Q)</option>
+            </select>
+          </label>
+        </div>
+        <label for="stId">Identifiant
+          <input id="stId" type="text" inputmode="text" autocapitalize="off" spellcheck="false" placeholder="Chiffres seuls ou identifiant complet STIF:…" required>
+        </label>
+        <label for="stDest">Direction à afficher (facultatif)
+          <input id="stDest" type="text" autocapitalize="off" spellcheck="false" placeholder="Ex. Châtelet : n'affiche que les trains vers Châtelet">
+        </label>
+        <button class="btn" type="submit">Ajouter la station</button>
+        <p class="hint">Une requête est envoyée par station à chaque actualisation. Une zone d'arrêts renvoie tous les sens et toutes les lignes. Le quota se décompte à chaque requête.</p>
+      </form>
+    </div>
+  </details>
+</main>
+
+<script>
+// ---------- Fonctions pures (testées hors navigateur) ----------
+// PURE-START
+function val(x) {
+  if (x == null) return '';
+  if (Array.isArray(x)) return val(x[0]);
+  if (typeof x === 'object') return val(x.value !== undefined ? x.value : x.Value);
+  return String(x);
+}
+function toDate(s) {
+  if (!s) return null;
+  // La doc PRIM indique des heures en GMT hors ResponseTimestamp.
+  const str = /T\d\d:\d\d(:\d\d(\.\d+)?)?$/.test(s) ? s + 'Z' : s;
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+function shortLine(ref) {
+  const m = /Line::([^:]+):?/.exec(ref || '');
+  return m ? m[1] : (ref || '?');
+}
+function parseVisits(json) {
+  const out = [];
+  let deliveries = json && json.Siri && json.Siri.ServiceDelivery && json.Siri.ServiceDelivery.StopMonitoringDelivery;
+  if (!deliveries) return out;
+  if (!Array.isArray(deliveries)) deliveries = [deliveries];
+  for (const d of deliveries) {
+    for (const v of (d.MonitoredStopVisit || [])) {
+      const j = v.MonitoredVehicleJourney || {};
+      const c = j.MonitoredCall || {};
+      const expected = c.ExpectedDepartureTime || c.ExpectedArrivalTime || null;
+      const aimed = c.AimedDepartureTime || c.AimedArrivalTime || null;
+      const t = toDate(expected || aimed);
+      if (!t) continue;
+      const lineRef = val(j.LineRef);
+      out.push({
+        lineRef: lineRef,
+        line: val(j.PublishedLineName) || shortLine(lineRef),
+        dest: val(j.DestinationName) || val(c.DestinationDisplay) || val(j.DirectionName),
+        time: t.getTime(),
+        realtime: !!expected,
+        status: val(c.DepartureStatus) || val(c.ArrivalStatus)
+      });
+    }
+  }
+  out.sort(function (a, b) { return a.time - b.time; });
+  return out;
+}
+function groupVisits(visits, now) {
+  const map = new Map();
+  for (const v of visits) {
+    if (v.time < now - 60000) continue; // passage déjà effectué
+    const key = v.line + '|' + v.dest;
+    if (!map.has(key)) map.set(key, { line: v.line, dest: v.dest, items: [] });
+    map.get(key).items.push(v);
+  }
+  const groups = Array.from(map.values());
+  for (const g of groups) {
+    g.active = g.items.filter(function (i) { return i.status !== 'cancelled'; });
+    g.first = (g.active[0] || g.items[0]).time;
+  }
+  groups.sort(function (a, b) { return a.first - b.first; });
+  return groups;
+}
+function minutesUntil(ms, now) { return Math.floor((ms - now) / 60000); }
+function fold(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function matchDest(dest, filter) { const f = fold(filter).trim(); return !f || fold(dest).indexOf(f) !== -1; }
+function normalizeId(raw, kind) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  if (/^STIF:/i.test(s)) return s.endsWith(':') ? s : s + ':';
+  if (/^\d+$/.test(s)) return kind === 'point' ? 'STIF:StopPoint:Q:' + s + ':' : 'STIF:StopArea:SP:' + s + ':';
+  return '';
+}
+function makeSample(now) {
+  const iso = function (m) { return new Date(now + m * 60000).toISOString(); };
+  const visit = function (line, dest, m, status) {
+    return { MonitoredVehicleJourney: {
+      LineRef: { value: 'STIF:Line::C' + line + ':' },
+      PublishedLineName: [{ value: String(Number(line) % 100 || line) }],
+      DestinationName: [{ value: dest }],
+      MonitoredCall: { ExpectedDepartureTime: iso(m), DepartureStatus: status || 'onTime' }
+    } };
+  };
+  return { Siri: { ServiceDelivery: { StopMonitoringDelivery: [{ MonitoredStopVisit: [
+    visit('01371', 'La Défense', 2), visit('01371', 'La Défense', 6), visit('01371', 'La Défense', 11),
+    visit('01371', 'Château de Vincennes', 1), visit('01371', 'Château de Vincennes', 5), visit('01371', 'Château de Vincennes', 9, 'delayed'),
+    visit('01374', 'Porte de Clignancourt', 4), visit('01374', 'Porte de Clignancourt', 8),
+    visit('01374', 'Mairie de Montrouge', 3), visit('01374', 'Mairie de Montrouge', 7, 'cancelled')
+  ] }] } } };
+}
+// PURE-END
+
+// ---------- État et stockage ----------
+const LS = 'metro-attente.v1';
+let cfg = { apikey: '', relay: '', quota: 1000, auto: 0, stations: [] };
+let data = {};      // id -> { visits, fetchedAt, error }
+let demo = false;
+let busy = false;
+let autoTimer = null;
+
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s) cfg = Object.assign(cfg, s); } catch (e) {}
+}
+function save() { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (e) {} }
+function dayKey() { return 'metro-attente.count.' + new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); }
+function getCount() { try { return parseInt(localStorage.getItem(dayKey()) || '0', 10) || 0; } catch (e) { return 0; } }
+function addCount(n) { try { localStorage.setItem(dayKey(), String(getCount() + n)); } catch (e) {} }
+
+// ---------- Réseau ----------
+const PRIM = 'https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring';
+async function fetchStation(id) {
+  const relay = cfg.relay.trim();
+  const url = (relay || PRIM) + '?MonitoringRef=' + encodeURIComponent(id);
+  const headers = { Accept: 'application/json' };
+  if (!relay) headers.apikey = cfg.apikey.trim();
+  addCount(1);
+  let res;
+  try { res = await fetch(url, { headers: headers }); }
+  catch (e) { return { error: "Appel bloqué par le navigateur ou réseau coupé. Si le réseau est bon, utilisez un relais (réglages)." }; }
+  if (res.status === 401 || res.status === 403) return { error: "Clé refusée, ou l'API « Prochains passages (requête unitaire) » n'est pas souscrite sur cette clé." };
+  if (res.status === 404) return { error: "Identifiant d'arrêt introuvable." };
+  if (res.status === 429) return { error: "Quota de requêtes dépassé." };
+  if (!res.ok) return { error: "Réponse inattendue de PRIM (code " + res.status + ")." };
+  let json;
+  try { json = await res.json(); } catch (e) { return { error: "Réponse illisible." }; }
+  return { visits: parseVisits(json), fetchedAt: Date.now() };
+}
+
+async function refresh() {
+  if (busy) return;
+  if (demo) { renderAll(); return; }
+  if (!cfg.stations.length) { setStatus('Ajoutez une station dans les réglages.'); return; }
+  if (!cfg.relay.trim() && !cfg.apikey.trim()) { setStatus('Renseignez votre clé API dans les réglages.'); $('#settings').open = true; return; }
+  const left = cfg.quota - getCount();
+  if (left < cfg.stations.length) { setStatus('Quota du jour atteint (' + getCount() + '/' + cfg.quota + ').'); renderQuota(); return; }
+  busy = true; $('#refreshBtn').disabled = true; setStatus('Actualisation…');
+  await Promise.all(cfg.stations.map(async function (s) { data[s.id] = await fetchStation(s.id); }));
+  busy = false; $('#refreshBtn').disabled = false;
+  setStatus('Actualisé à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }));
+  renderAll();
+}
+
+// ---------- Affichage ----------
+const $ = function (s) { return document.querySelector(s); };
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+function setStatus(t) { $('#status').textContent = t; }
+
+function renderQuota() {
+  const used = getCount(), q = Math.max(1, cfg.quota);
+  $('#quotaText').textContent = used + ' requêtes aujourd\'hui sur ' + q + (demo ? ' (l\'exemple n\'en consomme pas)' : '');
+  const pct = Math.min(100, Math.round(used / q * 100));
+  $('#meterFill').style.width = pct + '%';
+  $('#meter').classList.toggle('hot', pct >= 90);
+}
+
+function stationCard(label, id, entry, now, isDemo, destFilter) {
+  const card = el('article', 'station');
+  const plate = el('div', 'plate');
+  plate.appendChild(el('h2', null, label));
+  if (isDemo) plate.appendChild(el('small', null, 'Exemple'));
+  else if (entry && entry.fetchedAt) plate.appendChild(el('small', null, new Date(entry.fetchedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })));
+  card.appendChild(plate);
+  if (!entry) { card.appendChild(el('div', 'empty', 'Appuyez sur Actualiser.')); return card; }
+  if (entry.error) { card.appendChild(el('div', 'err', entry.error)); return card; }
+  const groups = groupVisits(entry.visits, now).filter(function (g) { return matchDest(g.dest, destFilter); });
+  if (!groups.length) {
+    card.appendChild(el('div', 'empty', destFilter
+      ? 'Aucun passage annoncé vers « ' + destFilter + ' ». Vérifiez le filtre de direction, ou le temps réel n\'est pas disponible sur cet arrêt.'
+      : 'Aucun passage annoncé pour cet arrêt. Le temps réel ne couvre qu\'une partie du réseau.'));
+    return card;
+  }
+  const rows = el('div', 'rows');
+  for (const g of groups) {
+    const row = el('div', 'row');
+    row.appendChild(el('div', 'badge', g.line));
+    const mid = el('div');
+    mid.appendChild(el('div', 'dest', g.dest || 'Direction inconnue'));
+    const meta = el('div', 'meta');
+    const f = g.active[0];
+    if (!f) meta.appendChild(el('span', 'chip crit', 'Supprimé'));
+    else {
+      if (f.status === 'delayed') meta.appendChild(el('span', 'chip warn', 'Retard'));
+      if (!f.realtime) meta.appendChild(el('span', 'chip mute', 'Horaire théorique'));
+    }
+    if (meta.childNodes.length) mid.appendChild(meta);
+    row.appendChild(mid);
+    const t = el('div', 'times');
+    if (f) {
+      const m = minutesUntil(f.time, now);
+      const big = el('div', 'next', m < 1 ? '<1' : String(m));
+      big.appendChild(el('span', null, 'min'));
+      t.appendChild(big);
+      const later = g.active.slice(1, 3).map(function (i) { return Math.max(0, minutesUntil(i.time, now)); });
+      if (later.length) t.appendChild(el('div', 'later', later.join(' · ') + ' min'));
+    }
+    row.appendChild(t);
+    rows.appendChild(row);
+  }
+  card.appendChild(rows);
+  return card;
+}
+
+function renderAll() {
+  const box = $('#stations');
+  box.replaceChildren();
+  const now = Date.now();
+  if (demo) {
+    const e = { visits: parseVisits(makeSample(now)), fetchedAt: now };
+    box.appendChild(stationCard('Station exemple', 'demo', e, now, true));
+  } else if (!cfg.stations.length) {
+    const c = el('div', 'station');
+    c.appendChild(el('div', 'empty', 'Aucune station suivie. Ouvrez « Réglages et stations », collez votre clé PRIM puis ajoutez une station. « Voir un exemple » montre l\'affichage avec des données fictives.'));
+    box.appendChild(c);
+  } else {
+    for (const s of cfg.stations) box.appendChild(stationCard(s.label, s.id, data[s.id], now, false, s.dest));
+  }
+  $('#demoBtn').textContent = demo ? 'Quitter l\'exemple' : 'Voir un exemple';
+  renderQuota();
+}
+
+function renderStationList() {
+  const list = $('#stationList');
+  list.replaceChildren();
+  if (!cfg.stations.length) { list.appendChild(el('p', 'hint', 'Aucune station enregistrée.')); return; }
+  cfg.stations.forEach(function (s, i) {
+    const it = el('div', 'item');
+    const left = el('div');
+    left.appendChild(el('div', null, s.label));
+    left.appendChild(el('code', null, s.id + (s.dest ? ' · vers ' + s.dest : '')));
+    const rm = el('button', 'btn', 'Retirer');
+    rm.type = 'button';
+    rm.addEventListener('click', function () { cfg.stations.splice(i, 1); delete data[s.id]; save(); renderStationList(); renderAll(); });
+    it.append(left, rm);
+    list.appendChild(it);
+  });
+}
+
+function applyAuto() {
+  clearInterval(autoTimer); autoTimer = null;
+  if (cfg.auto > 0) autoTimer = setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, cfg.auto * 1000);
+}
+
+// ---------- Événements ----------
+function init() {
+  load();
+  $('#apikey').value = cfg.apikey; $('#relay').value = cfg.relay;
+  $('#quota').value = cfg.quota; $('#auto').value = String(cfg.auto);
+  renderStationList(); renderAll(); applyAuto();
+
+  $('#refreshBtn').addEventListener('click', refresh);
+  $('#demoBtn').addEventListener('click', function () { demo = !demo; setStatus(demo ? 'Données fictives' : 'Pas encore actualisé'); renderAll(); });
+  $('#saveBtn').addEventListener('click', function () {
+    cfg.apikey = $('#apikey').value; cfg.relay = $('#relay').value;
+    cfg.quota = Math.max(1, parseInt($('#quota').value, 10) || 1000);
+    cfg.auto = parseInt($('#auto').value, 10) || 0;
+    save(); applyAuto(); renderAll(); setStatus('Réglages enregistrés');
+  });
+  $('#addForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    const id = normalizeId($('#stId').value, $('#stKind').value);
+    if (!id) { setStatus('Identifiant invalide : chiffres seuls ou « STIF:… ».'); return; }
+    cfg.stations.push({ label: $('#stLabel').value.trim() || id, id: id, dest: $('#stDest').value.trim() });
+    save(); $('#stLabel').value = ''; $('#stId').value = ''; $('#stDest').value = '';
+    renderStationList(); renderAll(); setStatus('Station ajoutée');
+  });
+  // Les minutes se décomptent sans nouvelle requête.
+  setInterval(function () { if (document.visibilityState === 'visible') renderAll(); }, 15000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') renderAll(); });
+}
+init();
+</script>
+</body>
+</html>
