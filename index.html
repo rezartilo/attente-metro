@@ -6,180 +6,137 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Métro">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c111b" media="(prefers-color-scheme: dark)">
 <title>Attente métro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Layout: une colonne mobile. Chaque station est un panneau de quai noir, texte ambre en points lumineux, pastille de ligne colorée, deux prochains trains par direction. */
+/* Layout : une colonne. Titre et bouton d'actualisation, puis une carte par station avec, par direction, la pastille de ligne, la destination et un grand chiffre en minutes. */
 :root {
-  --bg: #eef1f5;
+  --bg: #eef2f6;
   --surface: #ffffff;
-  --ink: #131c2b;
-  --muted: #5a6779;
-  --line: #d6dce6;
-  --accent: #1a3e8c;
+  --ink: #101828;
+  --muted: #5b6778;
+  --line: #e1e6ee;
+  --accent: #1f4ed8;
   --on-accent: #ffffff;
-  --led: #ffb000;
-  --led-dim: #9a6b00;
-  --led-warn: #ff8a5c;
-  --panel: #060606;
-  --panel-edge: #2b2b2b;
-  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
-  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --crit: #b42318;
+  --crit-bg: #fdecea;
+  --warn: #8a5300;
+  --warn-bg: #fff2d6;
+  --soft-bg: #eef1f6;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 8px 24px rgba(16, 24, 40, .06);
+  --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
-    --accent: #234ba8; --on-accent: #ffffff;
+    --bg: #0c111b; --surface: #151c2b; --ink: #eef2f8; --muted: #9aa6b8; --line: #243049;
+    --accent: #7ea1ff; --on-accent: #0c111b; --crit: #ff8a80; --crit-bg: #3a1c1c;
+    --warn: #ffc069; --warn-bg: #3a2c12; --soft-bg: #1d263a; --shadow: none;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b101b; --surface: #131b2c; --ink: #e8edf6; --muted: #98a5ba; --line: #26314a;
-  --accent: #234ba8; --on-accent: #ffffff;
+  --bg: #0c111b; --surface: #151c2b; --ink: #eef2f8; --muted: #9aa6b8; --line: #243049;
+  --accent: #7ea1ff; --on-accent: #0c111b; --crit: #ff8a80; --crit-bg: #3a1c1c;
+  --warn: #ffc069; --warn-bg: #3a2c12; --soft-bg: #1d263a; --shadow: none;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
   background: var(--bg); color: var(--ink);
-  font: 15px/1.45 var(--font-body);
+  font: 16px/1.45 var(--font);
   padding-inline: 16px;
-  padding-block: calc(env(safe-area-inset-top, 0px) + 14px) calc(env(safe-area-inset-bottom, 0px) + 28px);
+  padding-block: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 32px);
   -webkit-text-size-adjust: 100%;
 }
-main { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 14px; }
-.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-h1 { font: 600 30px/1 var(--font-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
-.sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-button, select, input { font: inherit; color: inherit; }
-button { cursor: pointer; }
+main { max-width: 520px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; min-height: 40px; font-weight: 500; }
-.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.btn[disabled] { opacity: .55; cursor: default; }
-.quota { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
-.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.meter > i { display: block; height: 100%; background: var(--accent); width: 0; }
-.meter.hot > i { background: #b3261e; }
 
-/* Panneaux de quai */
-#stations { display: flex; flex-direction: column; gap: 14px; }
-.board { background: var(--panel); border: 3px solid var(--panel-edge); border-radius: 12px; padding: 10px 14px 6px; box-shadow: inset 0 0 0 1px #000; color: var(--led); }
-.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #1d1d1d; font: 600 15px/1.1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--led-dim); }
-.board-head span { min-width: 0; overflow-wrap: anywhere; }
-.board-meta { white-space: nowrap; }
-.board-msg { padding: 12px 0 10px; color: var(--led-dim); font-size: 14px; }
-.board-msg.err { color: var(--led-warn); }
-.trains { display: flex; flex-direction: column; }
-.train { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 0; }
-.train + .train { border-top: 1px solid #141414; }
-.bullet { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 19px/1 var(--font-display); letter-spacing: 0; }
-.bullet.long { font-size: 10px; }
-.glow { filter: drop-shadow(0 0 3px rgba(255, 176, 0, .55)); min-width: 0; }
-/* Effet matrice à points : le texte est masqué par une grille de points ronds */
-.led {
-  color: var(--led);
-  -webkit-mask: radial-gradient(circle at 50% 50%, #000 0 1.15px, transparent 1.5px) 0 0 / 3px 3px;
-  mask: radial-gradient(circle at 50% 50%, #000 0 1.15px, transparent 1.5px) 0 0 / 3px 3px;
-}
-.dest { font: 600 23px/1.15 var(--font-display); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.time { font: 700 27px/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-.time.dim, .dest.dim { color: var(--led-dim); }
-.note { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--led-dim); margin-top: 1px; }
-.note.late { color: var(--led-warn); }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { min-width: 0; }
+h1 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.01em; }
+.sub { margin: 3px 0 0; color: var(--muted); font-size: 14px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding-inline: 16px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); font-weight: 700; flex-shrink: 0; }
+.btn[disabled] { opacity: .6; cursor: default; }
+.btn svg { width: 20px; height: 20px; flex: none; }
+.spin svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin svg { animation: none; } }
+.alert { background: var(--warn-bg); color: var(--warn); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
+.alert[hidden] { display: none; }
 
-details.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-details.panel > summary { padding: 12px 14px; font-weight: 600; cursor: pointer; }
-.panel .body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-input, select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 10px; min-height: 40px; color: var(--ink); width: 100%; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.hint { font-size: 12px; color: var(--muted); margin: 0; }
-.list { display: flex; flex-direction: column; gap: 6px; }
-.item { display: flex; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 6px 6px 10px; }
-.item code { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-@media (prefers-reduced-motion: no-preference) { .btn { transition: background-color .15s; } }
+#stations { display: flex; flex-direction: column; gap: 16px; transition: opacity .15s; }
+#stations.busy { opacity: .55; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px 18px 12px; }
+.card-head h2 { margin: 0; font-size: 20px; line-height: 1.2; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+.stamp { color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dir { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--line); }
+.bullet { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 21px; font-weight: 800; line-height: 1; }
+.bullet.long { font-size: 11px; }
+.dir-main { min-width: 0; }
+.dir-label { font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.dir-name { font-size: 18px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+.later { margin-top: 3px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pill { border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; background: var(--soft-bg); color: var(--muted); }
+.pill.late { background: var(--warn-bg); color: var(--warn); }
+.dir-time { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.num { font-size: 40px; line-height: 1; font-weight: 800; letter-spacing: -.02em; }
+.unit { font-size: 14px; color: var(--muted); font-weight: 700; margin-left: 3px; }
+.dir-time.cancelled .num { font-size: 18px; color: var(--crit); letter-spacing: 0; }
+.msg { margin: 0; padding: 14px 18px 18px; color: var(--muted); border-top: 1px solid var(--line); }
+.msg.err { color: var(--crit); background: var(--crit-bg); border-top-color: transparent; }
+.empty { padding: 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+.empty h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.empty p { margin: 0; color: var(--muted); }
+.empty code { font-size: 14px; background: var(--soft-bg); padding: 1px 6px; border-radius: 6px; }
 </style>
 </head>
 <body>
 <main>
   <header class="top">
-    <div>
-      <h1>Attente métro</h1>
-      <div class="sub" id="status">Pas encore actualisé</div>
+    <div class="brand">
+      <h1>Métro</h1>
+      <p class="sub" id="status">Chargement…</p>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" id="demoBtn" type="button">Voir un exemple</button>
-      <button class="btn primary" id="refreshBtn" type="button">Actualiser</button>
-    </div>
+    <button class="btn" id="refreshBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+      <span>Actualiser</span>
+    </button>
   </header>
-
-  <div class="quota" aria-live="polite">
-    <span id="quotaText"></span>
-    <div class="meter" id="meter"><i id="meterFill"></i></div>
-  </div>
-
+  <div class="alert" id="alert" hidden role="status"></div>
   <section id="stations" aria-live="polite"></section>
-
-  <details class="panel" id="settings">
-    <summary>Réglages et stations</summary>
-    <div class="body">
-      <label for="apikey">Clé API PRIM
-        <input id="apikey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Jeton généré sur prim.iledefrance-mobilites.fr">
-      </label>
-      <label for="relay">Adresse du relais (facultatif)
-        <input id="relay" type="url" autocapitalize="off" spellcheck="false" placeholder="https://mon-relais.workers.dev">
-      </label>
-      <p class="hint">Avec un relais, la clé reste sur le relais et n'est plus envoyée depuis l'iPhone. Utile si le navigateur bloque l'appel direct à PRIM.</p>
-      <div class="grid2">
-        <label for="quota">Quota par jour
-          <input id="quota" type="number" min="1" step="1" inputmode="numeric">
-        </label>
-        <label for="auto">Actualisation automatique
-          <select id="auto">
-            <option value="0">Désactivée</option>
-            <option value="60">Toutes les minutes</option>
-            <option value="120">Toutes les 2 minutes</option>
-            <option value="300">Toutes les 5 minutes</option>
-          </select>
-        </label>
-      </div>
-      <button class="btn" id="saveBtn" type="button">Enregistrer les réglages</button>
-
-      <hr style="border:0;border-top:1px solid var(--line);width:100%;margin:0">
-
-      <div class="list" id="stationList"></div>
-      <form id="addForm" class="body" style="padding:0">
-        <div class="grid2">
-          <label for="stLabel">Nom affiché
-            <input id="stLabel" type="text" placeholder="Ex. Châtelet" required>
-          </label>
-          <label for="stKind">Type d'identifiant
-            <select id="stKind">
-              <option value="area">Zone d'arrêts (STIF:StopArea:SP)</option>
-              <option value="point">Quai, un sens (STIF:StopPoint:Q)</option>
-            </select>
-          </label>
-        </div>
-        <label for="stId">Identifiant
-          <input id="stId" type="text" inputmode="text" autocapitalize="off" spellcheck="false" placeholder="Chiffres seuls ou identifiant complet STIF:…" required>
-        </label>
-        <label for="stDest">Direction à afficher (facultatif)
-          <input id="stDest" type="text" autocapitalize="off" spellcheck="false" placeholder="Ex. Châtelet : n'affiche que les trains vers Châtelet">
-        </label>
-        <button class="btn" type="submit">Ajouter la station</button>
-        <p class="hint">Une requête est envoyée par station à chaque actualisation. Une zone d'arrêts renvoie tous les sens et toutes les lignes. Le quota se décompte à chaque requête.</p>
-      </form>
-    </div>
-  </details>
 </main>
 
 <script>
+// =====================================================================
+// CONFIGURATION : seul endroit à modifier.
+// Renseignez « relay » (recommandé) OU « apiKey ».
+//  - relay  : adresse de votre relais Cloudflare (la clé reste chez Cloudflare, jamais dans cette page).
+//  - apiKey : clé PRIM écrite ici. Si le dépôt GitHub est public, toute personne qui ouvre le code de la page peut la lire.
+// =====================================================================
+const CONFIG = {
+  relay: '',
+  apiKey: '',
+  autoRefreshSeconds: 120,   // 0 pour désactiver. Chaque actualisation coûte une requête par station.
+  dailyLimit: 900,           // garde-fou par appareil (le quota PRIM est de 1 000 par jour pour un jeton récent)
+  stations: [
+    { label: 'Télégraphe', id: 'STIF:StopPoint:Q:21993:', dest: 'Châtelet' },
+    { label: 'Belleville', id: 'STIF:StopPoint:Q:22128:', dest: 'Porte Dauphine' },
+    { label: 'Anvers', id: 'STIF:StopArea:SP:22123:', dest: 'Nation' },
+    { label: 'Anvers', id: 'STIF:StopArea:SP:463120:', dest: 'Nation' },
+    { label: 'Belleville', id: 'STIF:StopArea:SP:463110:', dest: 'Rosny' }
+  ]
+};
+
 // ---------- Fonctions pures (testées hors navigateur) ----------
 // PURE-START
 // Couleurs de lignes de métro (de mémoire, à corriger si besoin) et correspondance code IDFM -> numéro.
@@ -259,20 +216,9 @@ function groupVisits(visits, now) {
   return groups;
 }
 function minutesUntil(ms, now) { return Math.floor((ms - now) / 60000); }
-function timeLabel(ms, now) {
-  const m = minutesUntil(ms, now);
-  return m < 1 ? '< 1 mn' : m + ' mn';
-}
-// Ignore accents, majuscules, espaces et tirets : \u00ab Rosny-Bois-Perrier \u00bb = \u00ab Rosny - Bois-Perrier \u00bb.
+// Ignore accents, majuscules, espaces et tirets : « Rosny-Bois-Perrier » = « Rosny - Bois-Perrier ».
 function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function matchDest(dest, filter) { const f = fold(filter).trim(); return !f || fold(dest).indexOf(f) !== -1; }
-function normalizeId(raw, kind) {
-  const s = String(raw || '').trim();
-  if (!s) return '';
-  if (/^STIF:/i.test(s)) return s.endsWith(':') ? s : s + ':';
-  if (/^\d+$/.test(s)) return kind === 'point' ? 'STIF:StopPoint:Q:' + s + ':' : 'STIF:StopArea:SP:' + s + ':';
-  return '';
-}
 function makeSample(now) {
   const iso = function (m) { return new Date(now + m * 60000).toISOString(); };
   const visit = function (code, name, dest, m, status) {
@@ -292,51 +238,32 @@ function makeSample(now) {
 }
 // PURE-END
 
-// ---------- État et stockage ----------
-const LS = 'metro-attente.v1';
-let cfg = { apikey: '', relay: '', quota: 1000, auto: 0, stations: [] };
-let data = {};      // id -> { visits, fetchedAt, error }
-let demo = false;
-let busy = false;
-let autoTimer = null;
-
-// Stations affichées d'office sur un appareil qui n'a encore aucun réglage enregistré (la clé API n'est jamais incluse ici).
-const DEFAULT_STATIONS = [
-  { label: 'Télégraphe', id: 'STIF:StopPoint:Q:21993:', dest: 'Châtelet' },
-  { label: 'Belleville', id: 'STIF:StopPoint:Q:22128:', dest: 'Porte Dauphine' },
-  { label: 'Anvers', id: 'STIF:StopArea:SP:22123:', dest: 'Nation' },
-  { label: 'Anvers', id: 'STIF:StopArea:SP:463120:', dest: 'Nation' },
-  { label: 'Belleville', id: 'STIF:StopArea:SP:463110:', dest: 'Rosny' }
-];
-function load() {
-  let found = false;
-  try {
-    const raw = localStorage.getItem(LS);
-    if (raw) { cfg = Object.assign(cfg, JSON.parse(raw)); found = true; }
-  } catch (e) {}
-  if (!found) cfg.stations = DEFAULT_STATIONS.map(function (s) { return Object.assign({}, s); });
-}
-function save() { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (e) {} }
-function dayKey() { return 'metro-attente.count.' + new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); }
+// ---------- Compteur de requêtes (par appareil) ----------
+function dayKey() { return 'metro.count.' + new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }); }
 function getCount() { try { return parseInt(localStorage.getItem(dayKey()) || '0', 10) || 0; } catch (e) { return 0; } }
 function addCount(n) { try { localStorage.setItem(dayKey(), String(getCount() + n)); } catch (e) {} }
 function hhmm(ms) { return new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }); }
 
 // ---------- Réseau ----------
 const PRIM = 'https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring';
+let data = {};          // id -> { visits, fetchedAt, error }
+let lastFetch = 0;
+let busy = false;
+const demo = location.hash === '#exemple';   // aperçu avec des données fictives : ajouter #exemple à l'adresse
+
 async function fetchStation(id) {
-  const relay = cfg.relay.trim();
+  const relay = (CONFIG.relay || '').trim();
   const url = (relay || PRIM) + '?MonitoringRef=' + encodeURIComponent(id);
   const headers = { Accept: 'application/json' };
-  if (!relay) headers.apikey = cfg.apikey.trim();
+  if (!relay) headers.apikey = (CONFIG.apiKey || '').trim();
   addCount(1);
   let res;
   try { res = await fetch(url, { headers: headers }); }
-  catch (e) { return { error: "Appel bloqué par le navigateur ou réseau coupé. Si le réseau est bon, utilisez un relais (réglages)." }; }
+  catch (e) { return { error: relay ? "Le relais ne répond pas. Vérifiez son adresse et l'origine autorisée." : "Appel bloqué par le navigateur ou réseau coupé. Passez par un relais." }; }
   if (res.status === 401 || res.status === 403) return { error: "Clé refusée, ou l'API « Prochains passages (requête unitaire) » n'est pas souscrite sur cette clé." };
   if (res.status === 404) return { error: "Identifiant d'arrêt introuvable." };
   if (res.status === 429) return { error: "Quota de requêtes dépassé." };
-  if (!res.ok) return { error: "Réponse inattendue de PRIM (code " + res.status + ")." };
+  if (!res.ok) return { error: "Réponse inattendue (code " + res.status + ")." };
   let json;
   try { json = await res.json(); } catch (e) { return { error: "Réponse illisible." }; }
   return { visits: parseVisits(json), fetchedAt: Date.now() };
@@ -344,16 +271,15 @@ async function fetchStation(id) {
 
 async function refresh() {
   if (busy) return;
-  if (demo) { renderAll(); return; }
-  if (!cfg.stations.length) { setStatus('Ajoutez une station dans les réglages.'); return; }
-  if (!cfg.relay.trim() && !cfg.apikey.trim()) { setStatus('Renseignez votre clé API dans les réglages.'); $('#settings').open = true; return; }
-  const left = cfg.quota - getCount();
-  if (left < cfg.stations.length) { setStatus('Quota du jour atteint (' + getCount() + '/' + cfg.quota + ').'); renderQuota(); return; }
-  busy = true; $('#refreshBtn').disabled = true; setStatus('Actualisation…');
-  await Promise.all(cfg.stations.map(async function (s) { data[s.id] = await fetchStation(s.id); }));
-  busy = false; $('#refreshBtn').disabled = false;
-  setStatus('Actualisé à ' + hhmm(Date.now()));
-  renderAll();
+  if (demo) { render(); return; }
+  if (!CONFIG.relay.trim() && !CONFIG.apiKey.trim()) { render(); return; }
+  if (getCount() + CONFIG.stations.length > CONFIG.dailyLimit) { setStatus('Limite du jour atteinte'); render(); return; }
+  busy = true; setBusy(true); setStatus('Actualisation…');
+  await Promise.all(CONFIG.stations.map(async function (s) { data[s.id] = await fetchStation(s.id); }));
+  lastFetch = Date.now();
+  busy = false; setBusy(false);
+  setStatus('Mis à jour à ' + hhmm(lastFetch));
+  render();
 }
 
 // ---------- Affichage ----------
@@ -365,135 +291,130 @@ function el(tag, cls, text) {
   return n;
 }
 function setStatus(t) { $('#status').textContent = t; }
-
-function renderQuota() {
-  const used = getCount(), q = Math.max(1, cfg.quota);
-  $('#quotaText').textContent = used + ' requêtes aujourd\'hui sur ' + q + (demo ? ' (l\'exemple n\'en consomme pas)' : '');
-  const pct = Math.min(100, Math.round(used / q * 100));
-  $('#meterFill').style.width = pct + '%';
-  $('#meter').classList.toggle('hot', pct >= 90);
+function setBusy(b) {
+  $('#refreshBtn').disabled = b;
+  $('#refreshBtn').classList.toggle('spin', b);
+  $('#stations').classList.toggle('busy', b);
 }
 
 function bullet(line) {
   const b = el('div', 'bullet' + (line.length > 3 ? ' long' : ''), line.replace(/B$/, 'bis'));
   const c = LINE_COLORS[line];
-  b.style.background = c || '#555555';
+  b.style.background = c || '#667085';
   b.style.color = c ? inkFor(c) : '#ffffff';
+  b.setAttribute('role', 'img');
+  b.setAttribute('aria-label', 'Ligne ' + line);
   return b;
 }
-function ledText(cls, text) {
-  const g = el('div', 'glow');
-  g.appendChild(el('div', 'led ' + cls, text));
-  return g;
-}
-function trainRow(line, dest, timeText, opts) {
-  const row = el('div', 'train');
-  row.appendChild(bullet(line));
-  const mid = el('div');
-  mid.style.minWidth = '0';
-  mid.appendChild(ledText('dest' + (opts.dim ? ' dim' : ''), dest || 'Direction inconnue'));
-  if (opts.note) mid.appendChild(el('div', 'note' + (opts.late ? ' late' : ''), opts.note));
-  row.appendChild(mid);
-  row.appendChild(ledText('time' + (opts.dim ? ' dim' : ''), timeText));
+
+function directionRow(g, now) {
+  const row = el('div', 'dir');
+  row.appendChild(bullet(g.line));
+
+  const main = el('div', 'dir-main');
+  main.appendChild(el('div', 'dir-label', 'Direction'));
+  main.appendChild(el('div', 'dir-name', g.dest || 'Inconnue'));
+  const f = g.active[0];
+  if (f) {
+    const next = g.active.slice(1, 3).map(function (i) { return Math.max(0, minutesUntil(i.time, now)); });
+    if (next.length) main.appendChild(el('div', 'later', 'Puis ' + next.join(' · ') + ' min'));
+    const pills = el('div', 'pills');
+    if (f.status === 'delayed') pills.appendChild(el('span', 'pill late', 'Retard'));
+    if (!f.realtime) pills.appendChild(el('span', 'pill', 'Horaire théorique'));
+    if (pills.childNodes.length) main.appendChild(pills);
+  }
+  row.appendChild(main);
+
+  const t = el('div', 'dir-time' + (f ? '' : ' cancelled'));
+  if (!f) {
+    t.appendChild(el('span', 'num', 'Supprimé'));
+  } else {
+    const m = minutesUntil(f.time, now);
+    if (m >= 60) t.appendChild(el('span', 'num', hhmm(f.time)));
+    else {
+      t.appendChild(el('span', 'num', m < 1 ? '<1' : String(m)));
+      t.appendChild(el('span', 'unit', 'min'));
+    }
+  }
+  row.appendChild(t);
   return row;
 }
 
-function stationCard(label, id, entry, now, isDemo, destFilter) {
-  const board = el('article', 'board');
-  const head = el('div', 'board-head');
-  head.appendChild(el('span', null, label));
-  head.appendChild(el('span', 'board-meta', isDemo ? 'Exemple' : (entry && entry.fetchedAt ? hhmm(entry.fetchedAt) : '')));
-  board.appendChild(head);
-  if (!entry) { board.appendChild(el('div', 'board-msg', 'Appuyez sur Actualiser.')); return board; }
-  if (entry.error) { board.appendChild(el('div', 'board-msg err', entry.error)); return board; }
+function stationCard(label, entry, now, stamp, destFilter) {
+  const card = el('article', 'card');
+  const head = el('header', 'card-head');
+  head.appendChild(el('h2', null, label));
+  head.appendChild(el('span', 'stamp', stamp));
+  card.appendChild(head);
+  if (!entry) { card.appendChild(el('p', 'msg', 'Chargement…')); return card; }
+  if (entry.error) { card.appendChild(el('p', 'msg err', entry.error)); return card; }
   const groups = groupVisits(entry.visits, now).filter(function (g) { return matchDest(g.dest, destFilter); });
   if (!groups.length) {
-    board.appendChild(el('div', 'board-msg', destFilter
-      ? 'Aucun passage annoncé vers « ' + destFilter + ' ». Vérifiez le filtre de direction, ou le temps réel n\'est pas disponible sur cet arrêt.'
-      : 'Aucun passage annoncé pour cet arrêt. Le temps réel ne couvre qu\'une partie du réseau.'));
-    return board;
+    card.appendChild(el('p', 'msg', destFilter
+      ? 'Aucun passage annoncé vers « ' + destFilter + ' ». Le service est peut-être terminé, ou le temps réel n\'est pas disponible sur cet arrêt.'
+      : 'Aucun passage annoncé. Le service est peut-être terminé, ou le temps réel n\'est pas disponible sur cet arrêt.'));
+    return card;
   }
-  const list = el('div', 'trains');
-  for (const g of groups) {
-    if (!g.active.length) { list.appendChild(trainRow(g.line, g.dest, 'Supprimé', { dim: true })); continue; }
-    g.active.slice(0, 2).forEach(function (it) {
-      const late = it.status === 'delayed';
-      const note = late ? 'Retard' : (!it.realtime ? 'Horaire théorique' : '');
-      list.appendChild(trainRow(g.line, g.dest, timeLabel(it.time, now), { note: note, late: late, dim: !it.realtime }));
-    });
-  }
-  board.appendChild(list);
-  return board;
+  for (const g of groups) card.appendChild(directionRow(g, now));
+  return card;
 }
 
-function renderAll() {
+function configCard() {
+  const card = el('article', 'card');
+  const box = el('div', 'empty');
+  box.appendChild(el('h2', null, 'Configuration à terminer'));
+  const p1 = el('p', null, 'Ouvrez index.html sur GitHub, puis renseignez ');
+  p1.appendChild(el('code', null, 'relay'));
+  p1.appendChild(document.createTextNode(' (adresse du relais, recommandé) ou '));
+  p1.appendChild(el('code', null, 'apiKey'));
+  p1.appendChild(document.createTextNode(' dans le bloc CONFIG, en haut du script.'));
+  box.appendChild(p1);
+  box.appendChild(el('p', null, 'Pour voir l\'affichage en attendant, ajoutez #exemple à la fin de l\'adresse.'));
+  card.appendChild(box);
+  return card;
+}
+
+function render() {
   const box = $('#stations');
   box.replaceChildren();
   const now = Date.now();
+  const alertEl = $('#alert');
+  alertEl.hidden = true;
   if (demo) {
     const e = { visits: parseVisits(makeSample(now)), fetchedAt: now };
-    box.appendChild(stationCard('Télégraphe', 'demo', e, now, true, ''));
-  } else if (!cfg.stations.length) {
-    const b = el('article', 'board');
-    b.appendChild(el('div', 'board-msg', 'Aucune station suivie. Ouvrez « Réglages et stations », collez votre clé PRIM puis ajoutez une station. « Voir un exemple » montre l\'affichage avec des données fictives.'));
-    box.appendChild(b);
-  } else {
-    for (const s of cfg.stations) box.appendChild(stationCard(s.label, s.id, data[s.id], now, false, s.dest));
+    setStatus('Données fictives');
+    box.appendChild(stationCard('Télégraphe', e, now, 'Exemple', ''));
+    return;
   }
-  $('#demoBtn').textContent = demo ? 'Quitter l\'exemple' : 'Voir un exemple';
-  renderQuota();
+  if (!CONFIG.relay.trim() && !CONFIG.apiKey.trim()) {
+    setStatus('Non configuré');
+    box.appendChild(configCard());
+    return;
+  }
+  if (getCount() + CONFIG.stations.length > CONFIG.dailyLimit) {
+    alertEl.textContent = 'Limite de requêtes atteinte sur cet appareil pour aujourd\'hui. Reprise demain.';
+    alertEl.hidden = false;
+  }
+  for (const s of CONFIG.stations) {
+    const e = data[s.id];
+    box.appendChild(stationCard(s.label, e, now, e && e.fetchedAt ? hhmm(e.fetchedAt) : '', s.dest));
+  }
 }
 
-function renderStationList() {
-  const list = $('#stationList');
-  list.replaceChildren();
-  if (!cfg.stations.length) { list.appendChild(el('p', 'hint', 'Aucune station enregistrée.')); return; }
-  cfg.stations.forEach(function (s, i) {
-    const it = el('div', 'item');
-    const left = el('div');
-    left.appendChild(el('div', null, s.label));
-    left.appendChild(el('code', null, s.id + (s.dest ? ' · vers ' + s.dest : '')));
-    const rm = el('button', 'btn', 'Retirer');
-    rm.type = 'button';
-    rm.addEventListener('click', function () { cfg.stations.splice(i, 1); delete data[s.id]; save(); renderStationList(); renderAll(); });
-    it.append(left, rm);
-    list.appendChild(it);
-  });
+// ---------- Démarrage ----------
+$('#refreshBtn').addEventListener('click', refresh);
+render();
+refresh();
+if (CONFIG.autoRefreshSeconds > 0 && !demo) {
+  setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, CONFIG.autoRefreshSeconds * 1000);
 }
-
-function applyAuto() {
-  clearInterval(autoTimer); autoTimer = null;
-  if (cfg.auto > 0) autoTimer = setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, cfg.auto * 1000);
-}
-
-// ---------- Événements ----------
-function init() {
-  load();
-  $('#apikey').value = cfg.apikey; $('#relay').value = cfg.relay;
-  $('#quota').value = cfg.quota; $('#auto').value = String(cfg.auto);
-  renderStationList(); renderAll(); applyAuto();
-
-  $('#refreshBtn').addEventListener('click', refresh);
-  $('#demoBtn').addEventListener('click', function () { demo = !demo; setStatus(demo ? 'Données fictives' : 'Pas encore actualisé'); renderAll(); });
-  $('#saveBtn').addEventListener('click', function () {
-    cfg.apikey = $('#apikey').value; cfg.relay = $('#relay').value;
-    cfg.quota = Math.max(1, parseInt($('#quota').value, 10) || 1000);
-    cfg.auto = parseInt($('#auto').value, 10) || 0;
-    save(); applyAuto(); renderAll(); setStatus('Réglages enregistrés');
-  });
-  $('#addForm').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    const id = normalizeId($('#stId').value, $('#stKind').value);
-    if (!id) { setStatus('Identifiant invalide : chiffres seuls ou « STIF:… ».'); return; }
-    cfg.stations.push({ label: $('#stLabel').value.trim() || id, id: id, dest: $('#stDest').value.trim() });
-    save(); $('#stLabel').value = ''; $('#stId').value = ''; $('#stDest').value = '';
-    renderStationList(); renderAll(); setStatus('Station ajoutée');
-  });
-  // Les minutes se décomptent sans nouvelle requête.
-  setInterval(function () { if (document.visibilityState === 'visible') renderAll(); }, 15000);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') renderAll(); });
-}
-init();
+// Les minutes se décomptent sans nouvelle requête.
+setInterval(function () { if (document.visibilityState === 'visible') render(); }, 15000);
+// En revenant sur l'app, actualiser si les données ont plus d'une minute.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible') return;
+  if (Date.now() - lastFetch > 60000) refresh(); else render();
+});
 </script>
 </body>
 </html>
